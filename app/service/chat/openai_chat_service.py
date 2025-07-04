@@ -51,7 +51,7 @@ def _build_tools(
             or model.endswith("-image")
             or model.endswith("-image-generation")
         )
-        and not _has_media_parts(messages)  # Use the updated check
+        and not _has_media_parts(messages)
     ):
         tool["codeExecution"] = {}
         logger.debug("Code execution tool enabled.")
@@ -83,8 +83,13 @@ def _build_tools(
             names, functions = set(), []
             for fc in function_declarations:
                 if fc.get("name") not in names:
-                    names.add(fc.get("name"))
-                    functions.append(fc)
+                    if fc.get("name")=="googleSearch":
+                        # cherry开启内置搜索时，添加googleSearch工具
+                        tool["googleSearch"] = {}
+                    else:
+                        # 其他函数，添加到functionDeclarations中
+                        names.add(fc.get("name"))
+                        functions.append(fc)
 
             tool["functionDeclarations"] = functions
 

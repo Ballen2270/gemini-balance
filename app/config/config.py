@@ -59,7 +59,13 @@ class Settings(BaseSettings):
     TEST_MODEL: str = DEFAULT_MODEL
     TIME_OUT: int = DEFAULT_TIMEOUT
     MAX_RETRIES: int = MAX_RETRIES
-    PROXIES: List[str] = []  # 新增：代理服务器列表
+    PROXIES: List[str] = []
+    PROXIES_USE_CONSISTENCY_HASH_BY_API_KEY: bool = True  # 是否使用一致性哈希来选择代理
+    VERTEX_API_KEYS: List[str] = []
+    VERTEX_EXPRESS_BASE_URL: str = "https://aiplatform.googleapis.com/v1beta1/publishers/google"
+
+    # 智能路由配置
+    URL_NORMALIZATION_ENABLED: bool = False  # 是否启用智能路由映射功能
 
     # 模型相关配置
     SEARCH_MODELS: List[str] = ["gemini-2.0-flash-exp"]
@@ -68,8 +74,8 @@ class Settings(BaseSettings):
     TOOLS_CODE_EXECUTION_ENABLED: bool = False
     SHOW_SEARCH_LINK: bool = True
     SHOW_THINKING_PROCESS: bool = True
-    THINKING_MODELS: List[str] = []  # 新增：用于思考过程的模型列表
-    THINKING_BUDGET_MAP: Dict[str, float] = {}  # 新增：模型对应的预算映射
+    THINKING_MODELS: List[str] = []
+    THINKING_BUDGET_MAP: Dict[str, float] = {}
 
     # 图像生成相关配置
     PAID_KEY: str = ""
@@ -101,12 +107,13 @@ class Settings(BaseSettings):
     GITHUB_REPO_NAME: str = "gemini-balance"
 
     # 日志配置
-    LOG_LEVEL: str = "INFO"  # 默认日志级别
-    AUTO_DELETE_ERROR_LOGS_ENABLED: bool = True  # 是否开启自动删除错误日志
-    AUTO_DELETE_ERROR_LOGS_DAYS: int = 7  # 自动删除多少天前的错误日志 (1, 7, 30)
-    AUTO_DELETE_REQUEST_LOGS_ENABLED: bool = False  # 是否开启自动删除请求日志
-    AUTO_DELETE_REQUEST_LOGS_DAYS: int = 30  # 自动删除多少天前的请求日志 (1, 7, 30)
-    SAFETY_SETTINGS: List[Dict[str, str]] = DEFAULT_SAFETY_SETTINGS  # 新增：安全设置
+    LOG_LEVEL: str = "INFO"
+    AUTO_DELETE_ERROR_LOGS_ENABLED: bool = True
+    AUTO_DELETE_ERROR_LOGS_DAYS: int = 7
+    AUTO_DELETE_REQUEST_LOGS_ENABLED: bool = False
+    AUTO_DELETE_REQUEST_LOGS_DAYS: int = 30
+    SAFETY_SETTINGS: List[Dict[str, str]] = DEFAULT_SAFETY_SETTINGS
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -141,7 +148,6 @@ def _parse_db_value(key: str, db_value: str, target_type: Type) -> Any:
         elif target_type == Dict[str, float]:
             parsed_dict = {}
             try:
-                # First attempt: standard JSON parsing
                 parsed = json.loads(db_value)
                 if isinstance(parsed, dict):
                     parsed_dict = {str(k): float(v) for k, v in parsed.items()}
@@ -150,7 +156,6 @@ def _parse_db_value(key: str, db_value: str, target_type: Type) -> Any:
                         f"Parsed DB value for key '{key}' is not a dictionary type. Value: {db_value}"
                     )
             except (json.JSONDecodeError, ValueError, TypeError) as e1:
-                # Second attempt: try replacing single quotes if JSONDecodeError occurred
                 if isinstance(e1, json.JSONDecodeError) and "'" in db_value:
                     logger.warning(
                         f"Failed initial JSON parse for key '{key}'. Attempting to replace single quotes. Error: {e1}"
@@ -169,11 +174,10 @@ def _parse_db_value(key: str, db_value: str, target_type: Type) -> Any:
                             f"Could not parse '{db_value}' as Dict[str, float] for key '{key}' even after replacing quotes: {e2}. Returning empty dict."
                         )
                 else:
-                    # Log other errors (ValueError, TypeError) or JSON errors without single quotes
                     logger.error(
                         f"Could not parse '{db_value}' as Dict[str, float] for key '{key}': {e1}. Returning empty dict."
                     )
-            return parsed_dict  # Return the parsed dict or an empty one if all attempts fail
+            return parsed_dict
         # 处理 List[Dict[str, str]]
         elif target_type == List[Dict[str, str]]:
             try:
@@ -192,7 +196,7 @@ def _parse_db_value(key: str, db_value: str, target_type: Type) -> Any:
                         logger.warning(
                             f"Invalid structure in List[Dict[str, str]] for key '{key}'. Value: {db_value}"
                         )
-                        return []  # 或者返回默认值？这里返回空列表
+                        return []
                 else:
                     logger.warning(
                         f"Parsed DB value for key '{key}' is not a list type. Value: {db_value}"
@@ -374,7 +378,7 @@ async def sync_initial_settings():
             data = {
                 "key": key,
                 "value": db_value,
-                "description": f"{key} configuration setting",  # 默认描述
+                "description": f"{key} configuration setting",
                 "updated_at": now,
             }
 

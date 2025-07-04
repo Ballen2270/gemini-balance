@@ -131,7 +131,7 @@ class OpenAICompatiableService:
                 logger.info("Streaming completed successfully")
                 is_success = True
                 status_code = 200
-                break  # 成功后退出循环
+                break
             except Exception as e:
                 retries += 1
                 is_success = False

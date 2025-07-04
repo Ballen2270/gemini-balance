@@ -161,10 +161,9 @@ async def process_delete_all_error_logs() -> int:
     返回删除的日志数量。
     """
     try:
-        # 确保数据库已连接 (如果适用，类似于 delete_old_error_logs)
-        # if not database.is_connected:
-        #     await database.connect()
-        #     logger.info("Database connection established for deleting all error logs.")
+        if not database.is_connected:
+            await database.connect()
+            logger.info("Database connection established for deleting all error logs.")
 
         deleted_count = await db_services.delete_all_error_logs()
         logger.info(

@@ -2,6 +2,7 @@
 数据库连接池模块
 """
 from pathlib import Path
+from urllib.parse import quote_plus
 from databases import Database
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
@@ -20,9 +21,9 @@ if settings.DATABASE_TYPE == "sqlite":
     DATABASE_URL = f"sqlite:///{db_path}"
 elif settings.DATABASE_TYPE == "mysql":
     if settings.MYSQL_SOCKET:
-        DATABASE_URL = f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@/{settings.MYSQL_DATABASE}?unix_socket={settings.MYSQL_SOCKET}"
+        DATABASE_URL = f"mysql+pymysql://{settings.MYSQL_USER}:{quote_plus(settings.MYSQL_PASSWORD)}@/{settings.MYSQL_DATABASE}?unix_socket={settings.MYSQL_SOCKET}"
     else:
-        DATABASE_URL = f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}"
+        DATABASE_URL = f"mysql+pymysql://{settings.MYSQL_USER}:{quote_plus(settings.MYSQL_PASSWORD)}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}"
 else:
     raise ValueError("Unsupported database type. Please set DATABASE_TYPE to 'sqlite' or 'mysql'.")
 
@@ -45,11 +46,8 @@ Base = declarative_base(metadata=metadata)
 if settings.DATABASE_TYPE == "sqlite":
     database = Database(DATABASE_URL)
 else:
-    database = Database(DATABASE_URL, min_size=5, max_size=20, pool_recycle=1800) # Reduced recycle time to 30 mins
+    database = Database(DATABASE_URL, min_size=5, max_size=20, pool_recycle=1800)
 
-# 移除了 SessionLocal 和 get_db 函数
-
-# --- Async connection functions for lifespan/async routes ---
 async def connect_to_db():
     """
     连接到数据库

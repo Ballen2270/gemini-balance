@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 # from app.middleware.request_logging_middleware import RequestLoggingMiddleware
+from app.middleware.smart_routing_middleware import SmartRoutingMiddleware
 from app.core.constants import API_VERSION
 from app.core.security import verify_auth_token
 from app.log.logger import get_middleware_logger
@@ -32,6 +33,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             and not request.url.path.startswith("/hf")
             and not request.url.path.startswith("/openai")
             and not request.url.path.startswith("/api/version/check")
+            and not request.url.path.startswith("/vertex-express")
         ):
 
             auth_token = request.cookies.get("auth_token")
@@ -51,6 +53,9 @@ def setup_middlewares(app: FastAPI) -> None:
     Args:
         app: FastAPI应用程序实例
     """
+    # 添加智能路由中间件（必须在认证中间件之前）
+    app.add_middleware(SmartRoutingMiddleware)
+
     # 添加认证中间件
     app.add_middleware(AuthMiddleware)
 
@@ -60,7 +65,7 @@ def setup_middlewares(app: FastAPI) -> None:
     # 配置CORS中间件
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # 生产环境建议配置具体的域名
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=[
             "GET",
@@ -68,8 +73,8 @@ def setup_middlewares(app: FastAPI) -> None:
             "PUT",
             "DELETE",
             "OPTIONS",
-        ],  # 明确指定允许的HTTP方法
-        allow_headers=["*"],  # 生产环境建议配置具体的请求头
-        expose_headers=["*"],  # 允许前端访问的响应头
-        max_age=600,  # 预检请求缓存时间(秒)
+        ],
+        allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=600,
     )

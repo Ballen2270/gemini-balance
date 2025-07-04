@@ -97,21 +97,11 @@ def _build_payload(model: str, request: GeminiRequest) -> Dict[str, Any]:
     if model.endswith("-image") or model.endswith("-image-generation"):
         payload.pop("systemInstruction")
         payload["generationConfig"]["responseModalities"] = ["Text", "Image"]
-    
-    # 处理思考配置：优先使用客户端提供的配置，否则使用默认配置
-    client_thinking_config = None
-    if request.generationConfig and request.generationConfig.thinkingConfig:
-        client_thinking_config = request.generationConfig.thinkingConfig
-    
-    if client_thinking_config is not None:
-        # 客户端提供了思考配置，直接使用
-        payload["generationConfig"]["thinkingConfig"] = client_thinking_config
-    else:
-        # 客户端没有提供思考配置，使用默认配置    
-        if model.endswith("-non-thinking"):
-            payload["generationConfig"]["thinkingConfig"] = {"thinkingBudget": 0} 
-        elif model in settings.THINKING_BUDGET_MAP:
-            payload["generationConfig"]["thinkingConfig"] = {"thinkingBudget": settings.THINKING_BUDGET_MAP.get(model,1000)}
+        
+    if model.endswith("-non-thinking"):
+        payload["generationConfig"]["thinkingConfig"] = {"thinkingBudget": 0} 
+    if model in settings.THINKING_BUDGET_MAP:
+        payload["generationConfig"]["thinkingConfig"] = {"thinkingBudget": settings.THINKING_BUDGET_MAP.get(model,1000)}
 
     return payload
 
@@ -141,7 +131,7 @@ class GeminiChatService:
         self, original_response: Dict[str, Any], text: str
     ) -> Dict[str, Any]:
         """创建包含指定文本的响应"""
-        response_copy = json.loads(json.dumps(original_response))
+        response_copy = json.loads(json.dumps(original_response))  # 深拷贝
         if response_copy.get("candidates") and response_copy["candidates"][0].get(
             "content", {}
         ).get("parts"):
@@ -210,7 +200,7 @@ class GeminiChatService:
             request_datetime = datetime.datetime.now()
             start_time = time.perf_counter()
             current_attempt_key = api_key
-            final_api_key = current_attempt_key
+            final_api_key = current_attempt_key # Update final key used
             try:
                 async for line in self.api_client.stream_generate_content(
                     payload, model, current_attempt_key

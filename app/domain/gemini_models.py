@@ -40,15 +40,16 @@ class GenerationConfig(BaseModel):
     frequencyPenalty: Optional[float] = None
     responseLogprobs: Optional[bool] = None
     logprobs: Optional[int] = None
+    thinkingConfig: Optional[Dict[str, Any]] = None
 
 
 class SystemInstruction(BaseModel):
-    role: str = "system"
-    parts: List[Dict[str, Any]] | Dict[str, Any]
+    role: Optional[str] = "system"
+    parts: Union[List[Dict[str, Any]], Dict[str, Any]]
 
 
 class GeminiContent(BaseModel):
-    role: str
+    role: Optional[str] = None
     parts: List[Dict[str, Any]]
 
 

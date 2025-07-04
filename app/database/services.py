@@ -189,7 +189,6 @@ async def get_error_logs(
             ErrorLog.request_time
         )
         
-        # Apply filters
         if key_search:
             query = query.where(ErrorLog.gemini_key.ilike(f"%{key_search}%"))
         if error_search:
@@ -219,14 +218,14 @@ async def get_error_logs(
         result = await database.fetch_all(query)
         return [dict(row) for row in result]
     except Exception as e:
-        logger.exception(f"Failed to get error logs with filters: {str(e)}") # Use exception for stack trace
+        logger.exception(f"Failed to get error logs with filters: {str(e)}")
         raise
 
 
 async def get_error_logs_count(
     key_search: Optional[str] = None,
     error_search: Optional[str] = None,
-    error_code_search: Optional[str] = None, # Added error code search
+    error_code_search: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
 ) -> int:
@@ -294,7 +293,7 @@ async def get_error_log_details(log_id: int) -> Optional[Dict[str, Any]]:
                 try:
                     log_dict['request_msg'] = json.dumps(log_dict['request_msg'], ensure_ascii=False, indent=2)
                 except TypeError:
-                    log_dict['request_msg'] = str(log_dict['request_msg']) # Fallback to string
+                    log_dict['request_msg'] = str(log_dict['request_msg'])
             return log_dict
         else:
             return None
@@ -372,7 +371,6 @@ async def delete_all_error_logs() -> int:
     try:
         # 1. 获取删除前的总数
         count_query = select(func.count()).select_from(ErrorLog)
-        # fetch_val() is suitable here as we expect a single scalar value
         total_to_delete = await database.fetch_val(count_query)
  
         if total_to_delete == 0:
@@ -380,7 +378,6 @@ async def delete_all_error_logs() -> int:
             return 0
  
         # 2. 执行删除操作
-        # This creates a query like "DELETE FROM error_log"
         delete_query = delete(ErrorLog)
         await database.execute(delete_query)
         
@@ -388,7 +385,6 @@ async def delete_all_error_logs() -> int:
         return total_to_delete
     except Exception as e:
         logger.error(f"Failed to delete all error logs: {str(e)}", exc_info=True)
-        # Re-raise the exception so it can be caught by the service layer or route handler
         raise
  
  
